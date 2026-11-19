@@ -1,12 +1,13 @@
-name: RDP-Pop-Hardware-Check
+name: RDP-Pop-Session
 
 on:
   workflow_dispatch:
 
 jobs:
-  rdp-pop-session:
+  rdp-session:
     runs-on: windows-latest
-    # 6 HORAS DE DURAÇÃO (360 MINUTOS)
+    
+    # LIMITE MÁXIMO DO GITHUB (6 HORAS EXATAS)
     timeout-minutes: 360 
 
     steps:
@@ -90,19 +91,22 @@ jobs:
           echo "TAILSCALE_IP=$tsIP" >> $env:GITHUB_ENV
           Write-Host ">>> IP Tailscale: $tsIP"
 
-      - name: Verify Hardware Resources (32GB RAM, 1TB SSD, RTX)
+      - name: Verify Hardware Resources (1TB SSD, 32GB RAM, RTX)
         run: |
           Write-Host ">>> Verificando Hardware..."
           
-          # RAM
+          # RAM (Deve ser ~32GB)
           $ram = Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property Capacity -Sum
           $ramGB = [math]::Round($ram.Sum / 1GB, 2)
           Write-Host ">>> RAM Total: ${ramGB} GB"
           
-          # Disco (SSD NVMe)
-          $disk = Get-PSDrive C | Select-Object Free
-          $diskGB = [math]::Round($disk.Free / 1GB, 2)
-          Write-Host ">>> Espaço Livre em C:\: ${diskGB} GB"
+          # Disco (Deve ser 1TB Total)
+          $disk = Get-PSDrive C
+          $totalBytes = $disk.Used + $disk.Free
+          $totalGB = [math]::Round($totalBytes / 1GB, 2)
+          $freeGB = [math]::Round($disk.Free / 1GB, 2)
+          Write-Host ">>> Tamanho Total do Disco: ${totalGB} GB"
+          Write-Host ">>> Espaço Livre: ${freeGB} GB"
           
           # GPU (RTX/Tesla)
           $gpu = Get-CimInstance Win32_VideoController
@@ -116,5 +120,5 @@ jobs:
           Write-Host "IP Tailscale: $env:TAILSCALE_IP"
           Write-Host "Usuário: RDP"
           Write-Host "Senha: $env:RDP_CREDS"
-          Write-Host "Hardware: 32GB RAM, 1TB+ SSD, RTX/GPU"
+          Write-Host "Hardware: 32GB RAM, 1TB SSD, RTX/GPU"
           Write-Host "=========================================="
