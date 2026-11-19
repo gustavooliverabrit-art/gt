@@ -1,4 +1,4 @@
-name: RDP-Pop-RTX-Roblox
+name: RDP-Pop-Hardware-Check
 
 on:
   workflow_dispatch:
@@ -93,30 +93,21 @@ jobs:
       - name: Verify Hardware Resources (32GB RAM, 1TB SSD, RTX)
         run: |
           Write-Host ">>> Verificando Hardware..."
+          
+          # RAM
           $ram = Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property Capacity -Sum
           $ramGB = [math]::Round($ram.Sum / 1GB, 2)
           Write-Host ">>> RAM Total: ${ramGB} GB"
           
+          # Disco (SSD NVMe)
           $disk = Get-PSDrive C | Select-Object Free
           $diskGB = [math]::Round($disk.Free / 1GB, 2)
           Write-Host ">>> Espaço Livre em C:\: ${diskGB} GB"
           
+          # GPU (RTX/Tesla)
           $gpu = Get-CimInstance Win32_VideoController
           Write-Host ">>> GPU Detectada: $($gpu.Name)"
           Write-Host ">>> VRAM: $($gpu.AdapterRAM / 1GB) GB"
-
-      - name: Install Roblox Player
-        run: |
-          Write-Host ">>> Baixando Roblox..."
-          $robloxInstallerUrl = "https://setup.roblox.com/RobloxPlayerStandalone.exe"
-          $installerPath = "$env:TEMP\RobloxPlayerStandalone.exe"
-          
-          Invoke-WebRequest -Uri $robloxInstallerUrl -OutFile $installerPath
-          
-          Write-Host ">>> Instalando Roblox..."
-          Start-Process msiexec.exe -ArgumentList "/i", "`"$installerPath`"", "/quiet", "/norestart" -Wait
-          Remove-Item $installerPath -Force
-          Write-Host ">>> Roblox instalado."
 
       - name: Final Status
         run: |
