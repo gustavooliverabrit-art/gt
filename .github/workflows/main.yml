@@ -101,10 +101,11 @@ jobs:
           Write-Host "Hardware: 16GB RAM, ~150GB SSD"
           Write-Host "=========================================="
 
-      # AQUI ESTÁ A Mágica: Mantém o Workflow Rodando
-      - name: Keep Alive (Run until timeout)
+      # MANTÉM VIVO ATÉ O TEMPO ACABAR
+      - name: Keep Alive (Loop Infinito)
         run: |
-          Write-Host ">>> Workflow continuará vivo até o tempo acabar..."
-          # Usa Wait-Event para manter o PowerShell ocupado sem gastar CPU
-          Register-ObjectEvent -InputObject (New-Object System.Diagnostics.Eventing.Reader.EventLogWatcher("Application")) -EventName EntryWritten -SourceName "KeepAlive" -Action { return } > $null
-          Wait-Event -Timeout 2147483 # Tempo máximo em segundos (~24 dias, maior que o limite do GitHub)
+          Write-Host ">>> Mantendo conexão viva..."
+          while ($true) {
+              Start-Sleep -Seconds 60
+              Write-Host ">>> Workflow ainda ativo..."
+          }
