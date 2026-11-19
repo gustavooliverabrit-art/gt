@@ -1,0 +1,129 @@
+name: RDP-Pop-RTX-Roblox
+
+on:
+  workflow_dispatch:
+
+jobs:
+  rdp-pop-session:
+    runs-on: windows-latest
+    # 6 HORAS DE DURAÇÃO (360 MINUTOS)
+    timeout-minutes: 360 
+
+    steps:
+      - name: Configure Core RDP Settings
+        run: |
+          Write-Host ">>> Configurando RDP..."
+          
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' `
+                             -Name "fDenyTSConnections" -Value 0 -Force
+          
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
+                             -Name "UserAuthentication" -Value 0 -Force
+          
+          netsh advfirewall firewall delete rule name="RDP-Pop" 2>$null
+          netsh advfirewall firewall add rule name="RDP-Pop" `
+            dir=in action=allow protocol=TCP localport=3389
+
+          Restart-Service -Name TermService -Force
+          Write-Host ">>> RDP Ligado!"
+
+      - name: Create RDP User with Secure Password
+        run: |
+          Write-Host ">>> Criando Usuário RDP..."
+          
+          Add-Type -AssemblyName System.Security
+          $charSet = @{
+              Upper   = [char[]](65..90)
+              Lower   = [char[]](97..122)
+              Number  = [char[]](48..57)
+              Special = ([char[]](33..47) + [char[]](58..64) +
+                         [char[]](91..96) + [char[]](123..126))
+          }
+          $rawPassword = @()
+          $rawPassword += $charSet.Upper | Get-Random -Count 4
+          $rawPassword += $charSet.Lower | Get-Random -Count 4
+          $rawPassword += $charSet.Number | Get-Random -Count 4
+          $rawPassword += $charSet.Special | Get-Random -Count 4
+          $password = -join ($rawPassword | Sort-Object { Get-Random })
+          $securePass = ConvertTo-SecureString $password -AsPlainText -Force
+          
+          $userName = "RDP"
+          
+          if (-not (Get-LocalUser -Name $userName -ErrorAction SilentlyContinue)) {
+              New-LocalUser -Name $userName -Password $securePass -AccountNeverExpires
+              Add-LocalGroupMember -Group "Administrators" -Member $userName
+              Add-LocalGroupMember -Group "Remote Desktop Users" -Member $userName
+          } else {
+              Set-LocalUser -Name $userName -Password $securePass
+          }
+          
+          echo "RDP_CREDS=User: RDP | Password: $password" >> $env:GITHUB_ENV
+          Write-Host ">>> Usuário criado! Senha salva."
+
+      - name: Install Tailscale
+        run: |
+          Write-Host ">>> Instalando Tailscale..."
+          $tsUrl = "https://pkgs.tailscale.com/stable/tailscale-setup-1.82.0-amd64.msi"
+          $installerPath = "$env:TEMP\tailscale.msi"
+          
+          Invoke-WebRequest -Uri $tsUrl -OutFile $installerPath
+          Start-Process msiexec.exe -ArgumentList "/i", "`"$installerPath`"", "/quiet", "/norestart" -Wait
+          Remove-Item $installerPath -Force
+
+      - name: Establish Tailscale Connection
+        run: |
+          Write-Host ">>> Conectando ao Tailscale..."
+          & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=gh-runner-$env:GITHUB_RUN_ID
+          
+          $tsIP = $null
+          $retries = 0
+          while (-not $tsIP -and $retries -lt 10) {
+              $tsIP = & "$env:ProgramFiles\Tailscale\tailscale.exe" ip -4
+              Start-Sleep -Seconds 5
+              $retries++
+          }
+          
+          if (-not $tsIP) {
+              Write-Error "IP do Tailscale não atribuído."
+              exit 1
+          }
+          echo "TAILSCALE_IP=$tsIP" >> $env:GITHUB_ENV
+          Write-Host ">>> IP Tailscale: $tsIP"
+
+      - name: Verify Hardware Resources (32GB RAM, 1TB SSD, RTX)
+        run: |
+          Write-Host ">>> Verificando Hardware..."
+          $ram = Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property Capacity -Sum
+          $ramGB = [math]::Round($ram.Sum / 1GB, 2)
+          Write-Host ">>> RAM Total: ${ramGB} GB"
+          
+          $disk = Get-PSDrive C | Select-Object Free
+          $diskGB = [math]::Round($disk.Free / 1GB, 2)
+          Write-Host ">>> Espaço Livre em C:\: ${diskGB} GB"
+          
+          $gpu = Get-CimInstance Win32_VideoController
+          Write-Host ">>> GPU Detectada: $($gpu.Name)"
+          Write-Host ">>> VRAM: $($gpu.AdapterRAM / 1GB) GB"
+
+      - name: Install Roblox Player
+        run: |
+          Write-Host ">>> Baixando Roblox..."
+          $robloxInstallerUrl = "https://setup.roblox.com/RobloxPlayerStandalone.exe"
+          $installerPath = "$env:TEMP\RobloxPlayerStandalone.exe"
+          
+          Invoke-WebRequest -Uri $robloxInstallerUrl -OutFile $installerPath
+          
+          Write-Host ">>> Instalando Roblox..."
+          Start-Process msiexec.exe -ArgumentList "/i", "`"$installerPath`"", "/quiet", "/norestart" -Wait
+          Remove-Item $installerPath -Force
+          Write-Host ">>> Roblox instalado."
+
+      - name: Final Status
+        run: |
+          Write-Host "=========================================="
+          Write-Host "RDP está pronto e ativo por 6 horas!"
+          Write-Host "IP Tailscale: $env:TAILSCALE_IP"
+          Write-Host "Usuário: RDP"
+          Write-Host "Senha: $env:RDP_CREDS"
+          Write-Host "Hardware: 32GB RAM, 1TB+ SSD, RTX/GPU"
+          Write-Host "=========================================="
