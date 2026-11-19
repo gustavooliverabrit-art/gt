@@ -91,28 +91,6 @@ jobs:
           echo "TAILSCALE_IP=$tsIP" >> $env:GITHUB_ENV
           Write-Host ">>> IP Tailscale: $tsIP"
 
-      - name: Verify Hardware Resources (1TB SSD, 32GB RAM, RTX)
-        run: |
-          Write-Host ">>> Verificando Hardware..."
-          
-          # RAM (Deve ser ~32GB)
-          $ram = Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property Capacity -Sum
-          $ramGB = [math]::Round($ram.Sum / 1GB, 2)
-          Write-Host ">>> RAM Total: ${ramGB} GB"
-          
-          # Disco (Deve ser 1TB Total)
-          $disk = Get-PSDrive C
-          $totalBytes = $disk.Used + $disk.Free
-          $totalGB = [math]::Round($totalBytes / 1GB, 2)
-          $freeGB = [math]::Round($disk.Free / 1GB, 2)
-          Write-Host ">>> Tamanho Total do Disco: ${totalGB} GB"
-          Write-Host ">>> Espaço Livre: ${freeGB} GB"
-          
-          # GPU (RTX/Tesla)
-          $gpu = Get-CimInstance Win32_VideoController
-          Write-Host ">>> GPU Detectada: $($gpu.Name)"
-          Write-Host ">>> VRAM: $($gpu.AdapterRAM / 1GB) GB"
-
       - name: Final Status
         run: |
           Write-Host "=========================================="
@@ -120,5 +98,13 @@ jobs:
           Write-Host "IP Tailscale: $env:TAILSCALE_IP"
           Write-Host "Usuário: RDP"
           Write-Host "Senha: $env:RDP_CREDS"
-          Write-Host "Hardware: 32GB RAM, 1TB SSD, RTX/GPU"
+          Write-Host "Hardware: 16GB RAM, ~150GB SSD"
           Write-Host "=========================================="
+
+      # AQUI ESTÁ A Mágica: Mantém o Workflow Rodando
+      - name: Keep Alive (Run until timeout)
+        run: |
+          Write-Host ">>> Workflow continuará vivo até o tempo acabar..."
+          # Usa Wait-Event para manter o PowerShell ocupado sem gastar CPU
+          Register-ObjectEvent -InputObject (New-Object System.Diagnostics.Eventing.Reader.EventLogWatcher("Application")) -EventName EntryWritten -SourceName "KeepAlive" -Action { return } > $null
+          Wait-Event -Timeout 2147483 # Tempo máximo em segundos (~24 dias, maior que o limite do GitHub)
