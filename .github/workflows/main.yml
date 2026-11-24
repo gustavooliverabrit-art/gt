@@ -1,4 +1,4 @@
-name: RDP-Gamer-Max-Perf
+name: RDP-Pop-Session
 
 on:
   workflow_dispatch:
@@ -11,33 +11,6 @@ jobs:
     timeout-minutes: 360 
 
     steps:
-      - name: Maximize Performance & Power Plan
-        run: |
-          Write-Host ">>> Otimizando para MÁXIMO DESEMPENHO..."
-          
-          # Define plano de energia de Alto Desempenho
-          powercfg /setactive 8c5e7fda-e8bf-4a97-9632-92b436987b4f
-          
-          # Desabilita Hibernação para liberar RAM e SSD
-          powercfg /hibernate off
-          
-          # Aumenta prioridade do serviço RDP
-          $rdpProc = Get-Process -Name "svchost" -Argument "*TermService*" -ErrorAction SilentlyContinue
-          if ($rdpProc) {
-              Set-ProcessPriorityClass -InputObject $rdpProc -Priority High
-              Write-Host "Prioridade RDP: Alta"
-          } else {
-              Write-Host "Serviço RDP encontrado ou ajustado via SO."
-          }
-          
-          # Configurações de Vídeo para máxima resolução e taxa de atualização
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
-                           -Name "MaxMonitors" -Value 4 -Force
-          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
-                           -Name "fEnableVirtualDesktop" -Value 1 -Force
-
-          Write-Host ">>> Otimização concluída!"
-
       - name: Configure Core RDP Settings
         run: |
           Write-Host ">>> Configurando RDP..."
@@ -121,10 +94,10 @@ jobs:
       - name: Final Status
         run: |
           Write-Host "=========================================="
-          Write-Host "PC Virtual Gamer - MODO PERFORMANCE"
-          Write-Host "CPU: 8 Núcleos (High Perf Mode)"
-          Write-Host "RAM: Máxima Disponível (Runner Limit)"
-          Write-Host "GPU: Virtualizada (RTX Class)"
+          Write-Host "PC Virtual Gamer RDP Pronto!"
+          Write-Host "Hardware Runner: Windows Latest (GPU Virtualizada)"
+          Write-Host "RAM Alocada: Dinâmica (Até 16GB+ comum)"
+          Write-Host "Armazenamento: SSD NVMe Padrão"
           Write-Host "Tempo Sessão: 6 Horas"
           Write-Host "------------------------------------------"
           Write-Host "IP Tailscale: $env:TAILSCALE_IP"
