@@ -91,6 +91,15 @@ jobs:
           echo "TAILSCALE_IP=$tsIP" >> $env:GITHUB_ENV
           Write-Host ">>> IP Tailscale: $tsIP"
 
+      - name: Infinite Keep-Alive Loop
+        run: |
+          Write-Host ">>> Iniciando Loop Infinito (Manterá vivo por 6h)..."
+          while ($true) {
+              Start-Sleep -Seconds 30
+              # Opcional: Escrever algo no log para confirmar que está vivo
+              # Write-Host "PC Virtual Vivo - $(Get-Date)"
+          }
+
       - name: Final Status
         run: |
           Write-Host "=========================================="
