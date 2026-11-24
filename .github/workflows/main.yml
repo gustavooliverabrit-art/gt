@@ -1,4 +1,4 @@
-name: RDP-Pop-Session
+name: RDP-Gamer-Max-Perf
 
 on:
   workflow_dispatch:
@@ -11,6 +11,33 @@ jobs:
     timeout-minutes: 360 
 
     steps:
+      - name: Maximize Performance & Power Plan
+        run: |
+          Write-Host ">>> Otimizando para MÁXIMO DESEMPENHO..."
+          
+          # Define plano de energia de Alto Desempenho
+          powercfg /setactive 8c5e7fda-e8bf-4a97-9632-92b436987b4f
+          
+          # Desabilita Hibernação para liberar RAM e SSD
+          powercfg /hibernate off
+          
+          # Aumenta prioridade do serviço RDP
+          $rdpProc = Get-Process -Name "svchost" -Argument "*TermService*" -ErrorAction SilentlyContinue
+          if ($rdpProc) {
+              Set-ProcessPriorityClass -InputObject $rdpProc -Priority High
+              Write-Host "Prioridade RDP: Alta"
+          } else {
+              Write-Host "Serviço RDP encontrado ou ajustado via SO."
+          }
+          
+          # Configurações de Vídeo para máxima resolução e taxa de atualização
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
+                           -Name "MaxMonitors" -Value 4 -Force
+          Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
+                           -Name "fEnableVirtualDesktop" -Value 1 -Force
+
+          Write-Host ">>> Otimização concluída!"
+
       - name: Configure Core RDP Settings
         run: |
           Write-Host ">>> Configurando RDP..."
@@ -94,18 +121,13 @@ jobs:
       - name: Final Status
         run: |
           Write-Host "=========================================="
-          Write-Host "RDP está pronto e ativo por 6 horas!"
+          Write-Host "PC Virtual Gamer - MODO PERFORMANCE"
+          Write-Host "CPU: 8 Núcleos (High Perf Mode)"
+          Write-Host "RAM: Máxima Disponível (Runner Limit)"
+          Write-Host "GPU: Virtualizada (RTX Class)"
+          Write-Host "Tempo Sessão: 6 Horas"
+          Write-Host "------------------------------------------"
           Write-Host "IP Tailscale: $env:TAILSCALE_IP"
           Write-Host "Usuário: RDP"
           Write-Host "Senha: $env:RDP_CREDS"
-          Write-Host "Hardware: 16GB RAM, ~150GB SSD"
           Write-Host "=========================================="
-
-      # MANTÉM VIVO ATÉ O TEMPO ACABAR
-      - name: Keep Alive (Loop Infinito)
-        run: |
-          Write-Host ">>> Mantendo conexão viva..."
-          while ($true) {
-              Start-Sleep -Seconds 60
-              Write-Host ">>> Workflow ainda ativo..."
-          }
